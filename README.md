@@ -1,57 +1,91 @@
 # 🏢 Fundsroom Mini ERP + CRM Operations Portal
 
 [![CI / CD Pipeline](https://github.com/GoondlaBalaji/fundsroom-operations-portal/actions/workflows/ci.yml/badge.svg)](https://github.com/GoondlaBalaji/fundsroom-operations-portal/actions/workflows/ci.yml)
+[![Node.js 20](https://img.shields.io/badge/Node.js-20-green?logo=node.js)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?logo=postgresql)](https://www.postgresql.org/)
+[![Deployed on Vercel](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)](https://fundsroom-operations-portal.vercel.app)
+[![Deployed on Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render)](https://fundsroom-operations-portal.onrender.com)
 
-> **Full Stack Developer Case Study** — Wholesale & Distribution Operations Management System built with Node.js, Express, TypeScript, PostgreSQL (Prisma ORM), React, and Vite.
+> **Full Stack Developer Case Study** — A production-grade, role-based Wholesale & Distribution Operations Management System built with Node.js, Express, TypeScript, PostgreSQL (Prisma ORM), React 18, and Vite. Includes AWS S3, Docker, GitHub Actions CI/CD, and 33/33 automated integration tests.
+
+---
+
+## 🌐 Live Production URLs
+
+| Resource | URL |
+| :--- | :--- |
+| **Live Frontend App** | [https://fundsroom-operations-portal.vercel.app](https://fundsroom-operations-portal.vercel.app) |
+| **Live Backend API** | [https://fundsroom-operations-portal.onrender.com](https://fundsroom-operations-portal.onrender.com) |
+| **API Health Check** | [https://fundsroom-operations-portal.onrender.com/health](https://fundsroom-operations-portal.onrender.com/health) |
+| **API Base Path** | `https://fundsroom-operations-portal.onrender.com/api` |
+| **GitHub Repository** | [https://github.com/GoondlaBalaji/fundsroom-operations-portal](https://github.com/GoondlaBalaji/fundsroom-operations-portal) |
+
+---
+
+## 🔑 Demo Credentials (Pre-Seeded)
+
+Because this is an internal enterprise portal, public self-registration is intentionally omitted. The database is pre-seeded with 4 role accounts. The login page also features **1-click Quick Demo Login** buttons for each role.
+
+| Role | Email | Password | Scope |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin@fundsroom.com` | `Password@123` | Full system access across all modules |
+| **Sales** | `sales@fundsroom.com` | `Password@123` | CRM, follow-ups, draft challan creation |
+| **Warehouse** | `warehouse@fundsroom.com` | `Password@123` | Product catalog, S3 images, inventory, challan confirmation |
+| **Accounts** | `accounts@fundsroom.com` | `Password@123` | Read-only audit + PDF invoice export |
 
 ---
 
 ## 📌 Executive Summary
 
-The **Fundsroom Mini ERP + CRM Operations Portal** is an internal enterprise software application designed for wholesale and distribution companies. It streamlines the lifecycle of customer relationships, product cataloging, warehouse inventory tracking, and sales delivery challan fulfillment.
+The **Fundsroom Operations Portal** is a production-grade, role-based Mini ERP + CRM system engineered for wholesale and distribution enterprises. It coordinates customer relationship management, product cataloging, stock ledger movements, and sales delivery challan fulfillment across four distinct operational roles.
 
-The platform provides role-tailored dashboards and permission controls for four key company roles: **Admin**, **Sales**, **Warehouse**, and **Accounts**.
+### Key Engineering Highlights
 
-### Key Architectural & Business Highlights:
-- **ACID Database Transactions**: Challan confirmation verifies stock levels, decrements inventory, logs outbound ledger movements, and marks the status as `CONFIRMED` in an atomic PostgreSQL transaction with zero race conditions.
-- **Strict Negative Stock Prevention**: Hard business validation blocking negative inventory before any state mutation occurs.
-- **Historical Product Snapshots**: Challan items record point-in-time snapshots of product names, SKUs, and prices to ensure invoices and legal delivery documents remain immutable even if catalog prices change later.
-- **Dedicated CRM Interaction Timeline**: Customer follow-up interactions are modeled as dedicated relational entities with author tracking, scheduled callback dates, and audit timestamps.
-- **Enterprise Design System**: Custom dark-mode UI with intuitive KPI dashboards, responsive data tables, low-stock threshold alerts, quick demo-role switchers, and printable invoice documents.
+- **ACID Transactional Stock Confirmations**: Delivery challan confirmation validates stock, decrements inventory, and logs outbound ledger movements atomically within a single `prisma.$transaction`, guaranteeing zero race conditions or orphaned records.
+- **Negative Stock Prevention**: Database-level conditional guards block overselling under concurrent dispatch attempts, ensuring physical inventory never drops below zero.
+- **Historical Product Snapshot Immutability**: Challan line items store point-in-time snapshots of product SKU, name, and unit price. Subsequent catalog edits never distort past legal dispatch or accounting records.
+- **AWS S3 Cloud Storage (Bonus)**: Product images are securely stored in a private S3 bucket with magic-byte MIME validation, UUID collision-free keys, and IAM least-privilege policies.
+- **Server-Side PDF Invoice Generation**: Vector PDFs are generated using `pdfkit` with full company branding, customer GSTIN, itemized snapshot tables, and signature blocks.
+- **Full Production Deployment**: Vercel SPA routing rewrites, Render backend orchestration, SSL-encrypted PostgreSQL, and real AWS S3 integration — fully live and publicly accessible.
 
 ---
 
 ## 🏗️ System Architecture
 
-```mermaid
-graph TD
-    subgraph Client Tier
-        UI[React 18 + Vite SPA<br/>TypeScript / Vanilla CSS Design System]
-    end
-
-    subgraph API & Application Tier
-        API[Express.js + TypeScript REST API]
-        Auth[JWT Authentication & RBAC Middleware]
-        Val[Zod Request Validation]
-        Routes[Modules: Auth, Customers, Products, Inventory, Challans, Dashboard]
-    end
-
-    subgraph Data & Persistence Tier
-        Prisma[Prisma ORM]
-        DB[(PostgreSQL Database)]
-    end
-
-    UI -->|HTTPS / Bearer JWT| API
-    API --> Auth
-    Auth --> Val
-    Val --> Routes
-    Routes --> Prisma
-    Prisma --> DB
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Vercel Edge Network                              │
+│            React 18 + Vite SPA (TypeScript + Vanilla CSS)              │
+│          vercel.json SPA rewrites — all routes → index.html            │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                         HTTPS (Bearer JWT)
+                     CORS: fundsroom-operations-portal.vercel.app
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Render Web Service                               │
+│               Node.js 20 + Express.js REST API (TypeScript)            │
+│         Zod Validation ▪ JWT Auth ▪ RBAC Middleware ▪ Error Handler    │
+└──────────────────┬──────────────────────────────────┬───────────────────┘
+                   │                                  │
+       Prisma ORM (SSL/TLS)                  AWS SDK v3 Client
+       Interactive Transactions              Server-side S3 uploads
+                   │                                  │
+                   ▼                                  ▼
+┌───────────────────────────────┐   ┌─────────────────────────────────────┐
+│     Render PostgreSQL DB      │   │           Amazon Web Services        │
+│  Users, Customers, Products,  │   │               AWS S3                │
+│  Inventory, Challans, Items   │   │  Private Product Image Bucket        │
+│  ACID Transactions/Snapshots  │   │  Block Public Access: ON             │
+└───────────────────────────────┘   └─────────────────────────────────────┘
 ```
 
 ---
 
-## 🗄️ Database Entity-Relationship (ER) Diagram
+## 🗄️ Database Entity-Relationship Diagram
 
 ```mermaid
 erDiagram
@@ -60,24 +94,19 @@ erDiagram
     User ||--o{ Product : "creates"
     User ||--o{ StockMovement : "records"
     User ||--o{ Challan : "creates"
-
     Customer ||--o{ CustomerFollowUp : "has history"
     Customer ||--o{ Challan : "places"
-
     Product ||--o{ StockMovement : "tracks"
     Product ||--o{ ChallanItem : "referenced in"
-
     Challan ||--|{ ChallanItem : "contains"
-
     User {
         string id PK
         string name
         string email
         string passwordHash
-        enum role "ADMIN | SALES | WAREHOUSE | ACCOUNTS"
+        string role
         datetime createdAt
     }
-
     Customer {
         string id PK
         string name
@@ -85,14 +114,13 @@ erDiagram
         string email
         string businessName
         string gstNumber
-        enum customerType "RETAIL | WHOLESALE | DISTRIBUTOR"
+        string customerType
         string address
-        enum status "LEAD | ACTIVE | INACTIVE"
+        string status
         datetime followUpDate
         string notes
         string createdById FK
     }
-
     CustomerFollowUp {
         string id PK
         string customerId FK
@@ -101,7 +129,6 @@ erDiagram
         string createdById FK
         datetime createdAt
     }
-
     Product {
         string id PK
         string name
@@ -111,33 +138,31 @@ erDiagram
         int stock
         int minStockAlert
         string warehouseLocation
+        string imageKey
+        string imageUrl
         boolean isActive
     }
-
     StockMovement {
         string id PK
         string productId FK
         int quantity
-        enum movementType "IN | OUT"
+        string movementType
         string reason
         string referenceId
         string createdById FK
         datetime createdAt
     }
-
     Challan {
         string id PK
         string challanNumber UK
         string customerId FK
-        enum status "DRAFT | CONFIRMED | CANCELLED"
+        string status
         int totalQuantity
         decimal totalAmount
         string notes
         datetime confirmedAt
-        datetime cancelledAt
         string createdById FK
     }
-
     ChallanItem {
         string id PK
         string challanId FK
@@ -155,474 +180,400 @@ erDiagram
 ## 👥 Role-Based Access Control (RBAC) Matrix
 
 | Module / Operation | Admin | Sales | Warehouse | Accounts |
-|---|:---:|:---:|:---:|:---:|
-| **Dashboard KPIs & Activity** | Full View | Sales Metrics | Stock Metrics | Financial Metrics |
-| **Customer Directory** | View / Create / Edit | View / Create / Edit | View Only | View Only |
-| **CRM Follow-up Timeline** | View / Log Notes | View / Log Notes | View Only | View Only |
-| **Product Catalog** | View / Create / Edit | View Only | View / Create / Edit | View Only |
+| :--- | :---: | :---: | :---: | :---: |
+| **Dashboard KPIs & Activity** | Full | Sales Metrics | Stock Metrics | Financial Metrics |
+| **Customer Directory — View** | Yes | Yes | Yes | Yes |
+| **Customer Directory — Create/Edit** | Yes | Yes | No | No |
+| **CRM Follow-up Notes — Add** | Yes | Yes | No | No |
+| **Product Catalog — View** | Yes | Yes | Yes | Yes |
+| **Product Catalog — Create/Edit** | Yes | No | Yes | No |
+| **AWS S3 Product Image Upload** | Yes | No | Yes | No |
 | **Receive Stock (IN Movement)** | Yes | No | Yes | No |
-| **Stock Movement Ledger** | Full Audit View | Read Only | Full Audit View | Read Only |
+| **Stock Movement Ledger — View** | Full Audit | Read-only | Full Audit | Read-only |
 | **Create Sales Challan (Draft)** | Yes | Yes | No | No |
 | **Confirm Challan & Deduct Stock** | Yes | Yes | Yes | No |
 | **Cancel Draft Challan** | Yes | Yes | No | No |
-| **Print / Export Delivery Challan** | Yes | Yes | Yes | Yes |
+| **Export PDF Invoice** | Yes | Yes | Yes | Yes |
 
 ---
 
-## 🔑 Pre-Seeded Demo Credentials
-
-For rapid testing and evaluation, the portal includes pre-seeded accounts with quick single-click login buttons on the login screen:
-
-| Role | Email | Password | Primary Use Case |
-|---|---|---|---|
-| **Admin** | `admin@fundsroom.com` | `Password@123` | Complete system access, audit logs, configuration |
-| **Sales** | `sales@fundsroom.com` | `Password@123` | Customer CRM, leads, draft challan creation |
-| **Warehouse**| `warehouse@fundsroom.com` | `Password@123` | Stock inward receipts, fulfillment & dispatch confirmation |
-| **Accounts** | `accounts@fundsroom.com` | `Password@123` | Financial audit, customer accounts, challan records |
-
----
-
-## 🚀 Getting Started Locally
-
-### Prerequisites
-- **Node.js**: v18.0.0 or higher (`node -v`)
-- **PostgreSQL**: v14.0 or higher (or Docker)
-- **Git**
-
----
-
-### Option A: Production-Ready Docker Compose Setup (Recommended)
-
-Run all services (**PostgreSQL 15**, **Compiled Node.js Backend**, and **Production Nginx React SPA**) with a single command:
-
-```bash
-docker compose up --build
-```
-Or run in the background (detached):
-```bash
-docker compose up -d
-```
-
-#### Service URLs:
-- **Frontend Operations Portal**: `http://localhost:5173`
-- **Backend REST API**: `http://localhost:4000/api`
-- **Health Check**: `http://localhost:4000/health`
-- **PostgreSQL Database**: `localhost:5433` (mapped from container `5432`)
-
-#### Container Management Commands:
-- **View Live Logs**:
-  ```bash
-  docker compose logs -f backend
-  docker compose logs -f frontend
-  ```
-- **Stop Containers (Preserves DB Data Volume)**:
-  ```bash
-  docker compose down
-  ```
-- **Reset Database & Clean Volumes (Destructive)**:
-  ```bash
-  docker compose down -v
-  docker compose up --build
-  ```
-  > ⚠️ **Warning**: `docker compose down -v` permanently removes the `postgres_data` volume and all stored database records.
-
-#### Database Initialization Strategy in Docker:
-The backend container runs an automated, production-grade entrypoint script (`docker-entrypoint.sh`):
-1. **Schema Synchronization**: Executes `npx prisma db push` upon container startup, ensuring all tables, enums, and foreign-key relations exist.
-2. **Idempotent Demo Seeding**: Checks if user records exist. If a fresh volume is detected (0 users), it automatically executes pre-compiled demo seed data (`dist/prisma/seed.js`), creating all 4 demo role accounts, sample catalog items, customers, and challans. If data already exists, seeding is safely skipped.
-
----
-
-### Option B: Manual Local Setup
-
-#### 1. Clone the repository
-```bash
-git clone <repository-url>
-cd Fundsroom
-```
-
-#### 2. Backend Setup
-```bash
-cd backend
-
-# Install dependencies
-npm install
-
-# Configure environment variables
-cp .env.example .env
-
-# Verify database connection string in .env:
-# DATABASE_URL="postgresql://postgres:password@localhost:5432/fundsroom_db?schema=public"
-
-# Run migrations and generate Prisma client
-npx prisma migrate dev --name init
-
-# Seed database with users, catalog products, customers, and movements
-npm run db:seed
-
-# Start the development server
-npm run dev
-```
-The backend will start on **`http://localhost:4000`**. Health check: `http://localhost:4000/health`.
-
-#### 3. Frontend Setup
-Open a second terminal window:
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start Vite dev server
-npm run dev
-```
-Open **`http://localhost:5173`** in your browser to launch the portal.
-
----
-
-## 🔄 End-to-End Business Flow Walkthrough
+## 🔄 End-to-End Business Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Sales as Sales Exec
+    actor Sales as Sales Executive
     actor Warehouse as Warehouse Manager
     actor System as Operations Portal
-
-    Sales->>System: 1. Add Customer (Apex Electronics) & Record Follow-up
-    Sales->>System: 2. Create Draft Sales Challan with 3 SKUs
-    Note over System: Point-in-time product snapshots stored
-    Warehouse->>System: 3. Receive new supplier shipment (Stock IN Movement)
-    Note over System: Inventory ledger records IN movement with PO reference
-    Warehouse->>System: 4. Review Draft Challan & Click "Confirm Dispatch"
-    Note over System: Atomic DB Transaction: Validate Stock -> Deduct Inventory -> Record OUT Movements -> Mark Confirmed
-    Warehouse->>System: 5. Print Official Delivery Challan with Receiver Sign-off
+    Sales->>System: Add Customer and log follow-up note
+    Sales->>System: Create Draft Challan with customer, products, and quantities
+    Note over System: Point-in-time product snapshots locked immediately
+    Warehouse->>System: Receive supplier shipment as Stock IN Movement
+    Note over System: Ledger logs IN movement with PO reference and timestamp
+    Warehouse->>System: Review draft challan and click Confirm Dispatch
+    Note over System: ACID Transaction: Validate stock, Decrement, Record OUT, Mark CONFIRMED
+    Warehouse->>System: Export official PDF delivery invoice
 ```
-
-1. **CRM Lead to Customer**:
-   - Sales team registers **Apex Electronics Ltd** under Wholesale category.
-   - Logs customer interaction notes and sets scheduled follow-up reminder.
-2. **Product Catalog & Stock Alert**:
-   - Products are cataloged with SKU, unit price, and minimum stock threshold.
-   - Low-stock items automatically highlight with danger badges when `stock <= minStockAlert`.
-3. **Inbound Stock Receipt**:
-   - Warehouse logs supplier PO inward via **Inventory &rarr; Receive Stock (IN)**.
-   - The on-hand balance increases immediately with a timestamped audit log.
-4. **Draft Challan Creation**:
-   - Sales selects customer and builds multi-item dispatch lines.
-   - Snapshot data (item name, SKU, price at time of order) is immutably locked.
-5. **Atomic Confirmation & Dispatch**:
-   - Warehouse confirms delivery. If any product stock is insufficient, transaction rolls back with a detailed warning.
-   - On success, items are deducted from warehouse stock, OUT stock movements are recorded, and delivery challan is ready to print.
 
 ---
 
-## 📡 API Reference Overview
+## 📁 Project Folder Structure
 
-All protected endpoints require `Authorization: Bearer <token>`.
+```
+fundsroom-operations-portal/
+├── backend/
+│   ├── src/
+│   │   ├── config/            # env.ts typed config and validation
+│   │   ├── middleware/        # JWT auth, RBAC guard, error handler
+│   │   ├── routes/            # auth, customers, products, inventory, challans, dashboard
+│   │   ├── services/          # challan, s3, pdf service logic
+│   │   └── utils/             # AppError, response helpers
+│   ├── prisma/
+│   │   ├── schema.prisma      # full relational schema
+│   │   └── seed.ts            # idempotent demo data seeder
+│   └── tests/                 # Jest and Supertest integration tests (33 tests)
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── layout/        # Sidebar, Header, Layout wrapper
+│   │   │   └── ui/            # Pagination, ConfirmModal, Spinner
+│   │   ├── context/           # AuthContext JWT and user session
+│   │   ├── pages/             # Dashboard, Customers, Products, Inventory, Challans
+│   │   ├── services/          # Axios API client modules
+│   │   └── index.css          # Institutional design system tokens and components
+│   ├── vercel.json            # SPA rewrite rules for client-side routing
+│   └── nginx.conf             # Production Nginx config for Docker
+├── .github/
+│   └── workflows/ci.yml       # GitHub Actions CI pipeline
+├── docker-compose.yml         # Full-stack multi-container setup
+├── vercel.json                # Root-level SPA rewrite fallback
+└── Fundsroom_Operations_Portal.postman_collection.json
+```
 
-### Authentication & Profile
+---
+
+## 📡 API Reference
+
+All protected endpoints require `Authorization: Bearer <JWT_TOKEN>`.
+
+### Authentication
+
 | Method | Endpoint | Access | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/login` | Public | Authenticate user & issue JWT |
-| `GET` | `/api/auth/me` | Authenticated | Fetch current user session details |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/login` | Public | Authenticate and issue JWT |
+| `GET` | `/api/auth/me` | Authenticated | Fetch current user session |
 
 ### Dashboard
+
 | Method | Endpoint | Access | Description |
-|---|---|---|---|
-| `GET` | `/api/dashboard/stats` | Authenticated | KPIs, recent challans, follow-ups, low-stock |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/dashboard/stats` | Authenticated | KPIs, recent challans, follow-ups, low-stock alerts |
 
 ### Customers & CRM
+
 | Method | Endpoint | Access | Description |
-|---|---|---|---|
-| `GET` | `/api/customers` | Authenticated | Paginated customer list with search and filters |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/customers` | Authenticated | Paginated list with search and status filter |
 | `POST` | `/api/customers` | Admin, Sales | Create customer record |
-| `GET` | `/api/customers/:id` | Authenticated | Customer details, challans & follow-up timeline |
-| `PUT` | `/api/customers/:id` | Admin, Sales | Update customer details |
-| `GET` | `/api/customers/:id/follow-ups` | Authenticated | Retrieve follow-up notes history |
-| `POST` | `/api/customers/:id/follow-ups` | Admin, Sales | Append new follow-up interaction note |
+| `GET` | `/api/customers/:id` | Authenticated | Customer details and follow-up timeline |
+| `PUT` | `/api/customers/:id` | Admin, Sales | Update customer fields |
+| `GET` | `/api/customers/:id/follow-ups` | Authenticated | Retrieve follow-up note history |
+| `POST` | `/api/customers/:id/follow-ups` | Admin, Sales | Append new follow-up note |
 
 ### Product Catalog
+
 | Method | Endpoint | Access | Description |
-|---|---|---|---|
-| `GET` | `/api/products` | Authenticated | Search products, filter by category/low-stock |
-| `GET` | `/api/products/categories` | Authenticated | Retrieve all distinct product categories |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/products` | Authenticated | Search and filter by category or low-stock |
+| `GET` | `/api/products/categories` | Authenticated | All distinct product categories |
 | `POST` | `/api/products` | Admin, Warehouse | Create product with unique SKU enforcement |
 | `GET` | `/api/products/:id` | Authenticated | Get product by ID |
 | `PUT` | `/api/products/:id` | Admin, Warehouse | Update product metadata |
+| `POST` | `/api/products/:id/image` | Admin, Warehouse | Upload product image to AWS S3 |
+| `DELETE` | `/api/products/:id/image` | Admin, Warehouse | Delete image from S3 and clear DB record |
 
 ### Inventory & Stock Ledger
+
 | Method | Endpoint | Access | Description |
-|---|---|---|---|
-| `GET` | `/api/inventory/movements` | Authenticated | Filterable audit log of all IN/OUT movements |
-| `POST` | `/api/inventory/movements` | Admin, Warehouse | Record manual stock receipt (IN movement) |
-| `GET` | `/api/inventory/low-stock` | Authenticated | Products below threshold level |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/inventory/movements` | Authenticated | Full filterable IN/OUT ledger audit log |
+| `POST` | `/api/inventory/movements` | Admin, Warehouse | Record manual stock receipt as IN movement |
+| `GET` | `/api/inventory/low-stock` | Authenticated | Products currently below minimum threshold |
 
 ### Sales Challans
+
 | Method | Endpoint | Access | Description |
-|---|---|---|---|
-| `GET` | `/api/challans` | Authenticated | List challans with search and status filter |
-| `POST` | `/api/challans` | Admin, Sales | Create draft challan with snapshot items |
-| `GET` | `/api/challans/:id` | Authenticated | Full challan detail with line items & audit trail |
-| `POST` | `/api/challans/:id/confirm` | Admin, Warehouse, Sales | Validate stock, deduct inventory, mark confirmed |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/challans` | Authenticated | Paginated challan list with search and status filter |
+| `POST` | `/api/challans` | Admin, Sales | Create draft challan with snapshot line items |
+| `GET` | `/api/challans/:id` | Authenticated | Full challan detail with items and audit trail |
+| `POST` | `/api/challans/:id/confirm` | Admin, Sales, Warehouse | Validate stock, deduct inventory, mark CONFIRMED |
 | `POST` | `/api/challans/:id/cancel` | Admin, Sales | Cancel draft challan |
-| `GET` | `/api/challans/:id/pdf` | Authenticated | Exports a challan as a PDF using persisted challan/customer data and historical product snapshots |
+| `GET` | `/api/challans/:id/pdf` | Authenticated | Export challan as server-side vector PDF |
 
 ---
 
-## 📮 Postman Collection
+## ☁️ AWS S3 Product Image Integration
 
-A complete, production-ready Postman collection is included in the project root:
-- **File**: [`Fundsroom_Operations_Portal.postman_collection.json`](./Fundsroom_Operations_Portal.postman_collection.json)
-- **Features**:
-  - Auto-extracts and sets `{{token}}` variable upon running the **Login (Admin)** request.
-  - Covers all positive and negative business edge cases (e.g. invalid stock, duplicate SKU, role permission guards).
+The portal integrates AWS S3 for enterprise product image management following strict cloud security principles.
 
----
+### Upload Flow
 
-## ☁️ AWS & Production Deployment Guide
-
-### Architecture Topology
-- **Frontend**: AWS S3 + CloudFront CDN (or Vercel / Netlify)
-- **Backend API**: AWS EC2 (t3.small with PM2 / Docker) or AWS ECS Fargate
-- **Database**: AWS RDS PostgreSQL (Multi-AZ with automated backups)
-- **SSL / Security**: AWS Certificate Manager (ACM) + Application Load Balancer (ALB) + AWS WAF
-
-### Step-by-Step EC2 Deployment:
-1. **Provision EC2 Instance**: Ubuntu 22.04 LTS (t3.small) within a custom VPC.
-2. **Install Node.js & Docker**:
-   ```bash
-   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-   sudo apt-get install -y nodejs nginx git
-   sudo npm install -g pm2
-   ```
-3. **Configure AWS RDS PostgreSQL**:
-   - Create a db.t3.micro RDS PostgreSQL instance.
-   - Configure Security Groups to allow inbound port `5432` only from the EC2 security group.
-4. **Deploy Backend with PM2**:
-   ```bash
-   git clone <repo-url> /var/www/fundsroom
-   cd /var/www/fundsroom/backend
-   npm ci
-   npx prisma migrate deploy
-   npm run build
-   pm2 start dist/server.js --name "fundsroom-api"
-   pm2 startup && pm2 save
-   ```
-5. **Nginx Reverse Proxy & SSL (Certbot)**:
-   ```nginx
-   server {
-       listen 80;
-       server_name erp.yourdomain.com;
-
-       location /api/ {
-           proxy_pass http://127.0.0.1:4000/api/;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-       }
-
-       location / {
-           root /var/www/fundsroom/frontend/dist;
-           try_files $uri $uri/ /index.html;
-       }
-   }
-   ```
-   Install SSL with Let's Encrypt:
-   ```bash
-   sudo apt-get install -y certbot python3-certbot-nginx
-   sudo certbot --nginx -d erp.yourdomain.com
-   ```
-
----
-
-## 🧪 Automated Testing & QA Verification
-### Running the Integration Test Suite
-The project includes a comprehensive automated test suite (Jest + Supertest) testing authentication, RBAC, single & multi-item challan confirmation, atomic rollback, and concurrency race conditions against real PostgreSQL:
-
-```bash
-cd backend
-npm test
-# or
-npm run test:integration
 ```
-*Current result: 5 test suites, 16 tests passing, 0 failures, 0 skipped.*
-
----
-
-## 🚀 Continuous Integration & Deployment (CI/CD)
-
-The repository features an automated GitHub Actions CI/CD workflow located at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) providing fast, deterministic regression testing on every push and pull request.
-
-### Pipeline Architecture
-
-```text
-               GitHub Repository
-                       │
-             ┌─────────┴─────────┐
-             │                   │
-      Push to main/master    Pull Request
-             │                   │
-             └─────────┬─────────┘
-                       ▼
-                 GitHub Actions
-                       │
-             ┌─────────┴─────────┐
-             │                   │
-             ▼                   ▼
-        Backend CI          Frontend CI
-             │                   │
-     PostgreSQL (Service)   npm ci (cached)
-             │                   │
-     Prisma db push         npm run build (Vite)
-             │
-     Integration Tests (16/16)
-             │
-     Backend Build (tsc)
-             │                   │
-             └─────────┬─────────┘
-                       ▼
-             Docker Build Validation
-            (docker compose build)
-                       ▼
-                  PASS / FAIL
-```
-
-### Pipeline Jobs & Verification Stages
-
-1. **Backend CI (`backend-ci`)**:
-   - **Environment**: Ubuntu Latest, Node.js 20 (`actions/setup-node` with npm caching).
-   - **Ephemeral Database**: Spins up a dedicated `postgres:15-alpine` service container with automated health checks (`pg_isready`).
-   - **Prisma Schema Sync**: Initializes test database schema safely using `npx prisma db push --skip-generate` without requiring fragile migrations.
-   - **Integration Test Suite**: Runs Jest + Supertest (`npm test`), verifying 16 integration test cases covering RBAC, challan confirmation, atomic rollback, and concurrency locks.
-   - **Production Compilation**: Executes TypeScript compiler (`npm run build`).
-
-2. **Frontend CI (`frontend-ci`)**:
-   - **Environment**: Ubuntu Latest, Node.js 20 with npm caching.
-   - **Deterministic Install**: `npm ci` verifies `package-lock.json` consistency.
-   - **Production Bundle**: Executes `npm run build` (`tsc -b && vite build`) ensuring strict type-safety and bundle optimization.
-
-3. **Docker Build Validation (`docker-validation`)**:
-   - Runs concurrently after backend and frontend validations pass.
-   - Executes `docker compose build` to verify multi-stage Dockerfiles and container configurations remain fully functional without regressions.
-
-### Security & Compliance
-- **Least-Privilege Permissions**: Explicitly configured with read-only repository permissions (`contents: read`).
-- **Zero Secret Exposure**: CI runs exclusively against ephemeral, isolated test credentials. No AWS, RDS, production credentials, or sensitive secrets are committed or required.
-- **Concurrency Control**: Outdated in-flight builds on the same branch are automatically cancelled (`cancel-in-progress: true`), optimizing GitHub Actions runner minutes.
-
-### Branch Protection Recommendation (Optional)
-Repository administrators can optionally enable branch protection under **GitHub Repository Settings → Branches → Add rule for `main`**:
-- Check **"Require status checks to pass before merging"**
-- Require status checks: `Backend CI (Tests & Build)`, `Frontend CI (Build Verification)`, and `Docker Build Validation`.
-
----
-
----
-
-## ☁️ Amazon S3 Product Image Upload & Storage (Task 4A)
-
-The portal integrates with **Amazon Web Services (AWS) Simple Storage Service (S3)** for enterprise product image management, adhering to strict cloud security and least-privilege principles.
-
-### Architecture & Security Workflow
-
-```text
-React Frontend (Vite)
+React Frontend
       │
-      │ 1. multipart/form-data (field: 'image')
-      │    Authorization: Bearer <JWT>
+      │  multipart/form-data (field: image) + Authorization: Bearer JWT
       ▼
-Node.js / Express Backend
-      │
-      ├─► 2. Authenticate JWT & Enforce RBAC (ADMIN or WAREHOUSE)
-      ├─► 3. Validate file size (<= 5 MB limit)
-      ├─► 4. Validate MIME type & buffer magic-bytes (JPEG, PNG, WebP, GIF)
-      ├─► 5. Generate collision-free key: products/{productId}/{uuid}.{ext}
-      │
-      ▼
-Amazon S3 (Private Bucket, Block Public Access: ON)
-      │
-      ├─► 6. PutObjectCommand (Server-side authenticated upload)
-      ├─► 7. Generate secure presigned GET URL (or direct signed link)
-      │
-      ▼
-PostgreSQL Database (Prisma ORM)
-      │
-      └─► 8. Save durable `imageKey` and `imageUrl` on Product model
-      └─► 9. Safe replacement: Delete old S3 object ONLY after new DB record persists
+Express Backend
+      ├── Authenticate JWT and enforce RBAC (ADMIN or WAREHOUSE only)
+      ├── Validate file size (5 MB maximum)
+      ├── Validate MIME type and binary magic-byte inspection
+      │     JPEG: FF D8 FF  |  PNG: 89 50 4E 47  |  WebP: RIFF...WEBP
+      ├── Generate collision-free key: products/{productId}/{uuid}.{ext}
+      └── PutObjectCommand to S3 Private Bucket
+            └── Save imageKey and imageUrl to PostgreSQL via Prisma
+                └── Safely delete OLD S3 object only after new DB record saved
 ```
 
-### API Endpoints
+### S3 Bucket CORS Policy
 
-| Method | Endpoint | Allowed Roles | Description |
-|---|---|---|---|
-| `POST` | `/api/products/:id/image` | `ADMIN`, `WAREHOUSE` | Uploads a new product image to S3 (`multipart/form-data`, key: `image`, max 5 MB). |
-| `DELETE` | `/api/products/:id/image` | `ADMIN`, `WAREHOUSE` | Deletes the image from S3 and nullifies `imageKey` and `imageUrl` in the database. |
-
-### Environment Variables
-
-Configure the following variables in your server-side `.env` file (never expose these to the frontend or git):
-
-```env
-AWS_REGION=ap-south-1
-AWS_S3_BUCKET=fundsroom-product-images-bucket
-AWS_ACCESS_KEY_ID=your-aws-access-key-id
-AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedOrigins": [
+      "https://fundsroom-operations-portal.vercel.app",
+      "http://localhost:5173"
+    ],
+    "ExposeHeaders": ["ETag"]
+  }
+]
 ```
 
-> **Note on Credential Resolution**: If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are omitted, the backend automatically falls back to the AWS standard credential provider chain (e.g., IAM Instance Profiles on EC2, ECS Task Execution Roles, or local `~/.aws/credentials`).
-
-### Recommended Least-Privilege IAM Policy
-
-Attach the following narrowly-scoped IAM policy to your IAM user or role:
+### Recommended IAM Policy (Least Privilege)
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "AllowFundsroomProductImageStorage",
+      "Sid": "FundsroomProductImages",
       "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObject",
-        "s3:DeleteObject"
-      ],
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
       "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/products/*"
     }
   ]
 }
 ```
 
-### S3 Bucket Configuration & Security Tradeoffs
+### Backend Environment Variables for S3
 
-1. **Block Public Access**: Keep **Block all public access: ON**.
-2. **Access Strategy**: S3 objects are kept private. The backend generates expiring presigned URLs or signed object access tokens, preventing public scraping or unauthorized bandwidth consumption.
-3. **MIME & Magic-Byte Validation**: Files are inspected server-side via buffer signatures to prevent malicious payload uploads spoofed as image extensions.
+```env
+AWS_REGION=ap-south-1
+AWS_S3_BUCKET_NAME=fundsroom-product-assets
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+```
 
-### AWS Pricing & Free Tier Safety Notice
+> **Note:** If credentials are omitted, the AWS SDK falls back to IAM Instance Profiles (EC2) or ECS Task Roles automatically.
 
-- Amazon S3 offers a generous **AWS Free Tier** allowance (typically 5 GB standard storage, 20,000 GET requests, and 2,000 PUT requests per month for eligible accounts for the first 12 months).
-- Please verify your AWS account's active tier status. S3 usage beyond the Free Tier or in non-eligible accounts incurs standard AWS rates.
-- No expensive AWS compute or CDN services (CloudFront, API Gateway, Lambda, ECS, RDS) were added for this task, maintaining minimal footprint and predictable cost control.
+---
+
+## 🚀 Getting Started Locally
+
+### Prerequisites
+- **Node.js** v18+ (`node -v`)
+- **PostgreSQL** v14+ (or Docker Desktop)
+- **Git**
+
+---
+
+### Option A: Docker Compose (Recommended)
+
+Runs PostgreSQL 15, Express backend, and Nginx React SPA in synchronized containers:
+
+```bash
+git clone https://github.com/GoondlaBalaji/fundsroom-operations-portal.git
+cd fundsroom-operations-portal
+cp .env.example .env
+docker compose up --build
+```
+
+| Service | URL |
+| :--- | :--- |
+| Frontend Portal | `http://localhost:5173` |
+| Backend REST API | `http://localhost:4000/api` |
+| API Health Check | `http://localhost:4000/health` |
+| PostgreSQL (host) | `localhost:5433` |
+
+```bash
+docker compose logs -f backend      # Live backend logs
+docker compose down                 # Stop and preserve data
+docker compose down -v              # Full reset and destroy data
+```
+
+> **Docker Auto-Seed:** On first startup, the backend detects an empty database and automatically seeds all 4 demo accounts, sample products, customers, and challans.
+
+---
+
+### Option B: Manual Local Setup
+
+```bash
+# Backend
+cd backend
+npm install
+cp .env.example .env
+npx prisma migrate dev --name init
+npm run db:seed
+npm run dev
+# Starts on http://localhost:4000
+
+# Frontend in a separate terminal
+cd frontend
+npm install
+npm run dev
+# Opens on http://localhost:5173
+```
+
+---
+
+## 🔐 Environment Variables Reference
+
+### Backend `.env`
+
+```env
+NODE_ENV=development
+PORT=4000
+DATABASE_URL=postgresql://postgres:password@localhost:5432/fundsroom_db?schema=public
+JWT_SECRET=your-256-bit-secret-key-here
+FRONTEND_URL=http://localhost:5173
+
+# AWS S3 — required for product image uploads
+AWS_REGION=ap-south-1
+AWS_S3_BUCKET_NAME=fundsroom-product-assets
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+```
+
+### Frontend `.env`
+
+```env
+VITE_API_URL=http://localhost:4000/api
+```
+
+### Production — Render Dashboard
+
+| Variable | Value |
+| :--- | :--- |
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | Render PostgreSQL connection string with SSL |
+| `JWT_SECRET` | 256-bit high-entropy secret |
+| `FRONTEND_URL` | `https://fundsroom-operations-portal.vercel.app` |
+| `AWS_REGION` | `ap-south-1` |
+| `AWS_S3_BUCKET_NAME` | `fundsroom-product-assets` |
+| `AWS_ACCESS_KEY_ID` | IAM least-privilege key |
+| `AWS_SECRET_ACCESS_KEY` | IAM least-privilege secret |
+
+> No production secrets are ever committed to Git.
+
+---
+
+## 🚢 Production Deployment Details
+
+### Backend — Render Web Service
+
+| Setting | Value |
+| :--- | :--- |
+| **Runtime** | Node.js 20 |
+| **Root Directory** | `backend` |
+| **Build Command** | `npm ci && npx prisma generate && npm run build` |
+| **Start Command** | `npm start` |
+| **Health Check** | `/health` |
+| **Auto-Deploy** | Push to `main` branch |
+
+### Frontend — Vercel
+
+| Setting | Value |
+| :--- | :--- |
+| **Framework** | Vite |
+| **Root Directory** | `frontend` |
+| **Build Command** | `npm run build` |
+| **Output Directory** | `dist` |
+| **SPA Routing** | `vercel.json` rewrites all paths to `/index.html` |
+| **Env Variable** | `VITE_API_URL=https://fundsroom-operations-portal.onrender.com/api` |
+
+---
+
+## 🧪 Automated Test Suite
+
+```bash
+cd backend
+npm test
+```
+
+| Suite | Tests | Status | Coverage |
+| :--- | :---: | :---: | :--- |
+| **Authentication** | 3 / 3 | PASS | Valid login, bad password, missing JWT |
+| **RBAC Enforcement** | 4 / 4 | PASS | All 4 roles — permission grants and 403 blocks |
+| **Customer CRM** | 2 / 2 | PASS | Customer creation, follow-up timeline |
+| **Challans & Stock Logic** | 6 / 6 | PASS | Draft/confirm, deduction, shortage rollback, race conditions |
+| **Product Snapshots** | 1 / 1 | PASS | Snapshot immutability after catalog price change |
+| **Challan PDF Export** | 6 / 6 | PASS | Binary PDF header, multi-role access, content-disposition |
+| **AWS S3 Image Upload** | 11 / 11 | PASS | Magic-byte check, 5 MB limit, safe replacement, deletion |
+| **Total** | **33 / 33** | **PASS** | **100% automated integration coverage** |
+
+---
+
+## ⚙️ GitHub Actions CI/CD Pipeline
+
+Defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Triggers on every push and PR to `main`.
+
+**Pipeline stages:**
+1. **Backend CI** — Spins up ephemeral PostgreSQL, runs Prisma db push, executes 33 integration tests, compiles TypeScript.
+2. **Frontend CI** — Runs `npm ci` and `npm run build` (tsc + vite), verifying strict type-safety and bundle output.
+3. **Docker Build Validation** — Runs `docker compose build` to verify all multi-stage containers remain healthy.
+
+**Security:** Zero production secrets required in CI. All AWS operations are mocked in tests. Concurrency cancellation enabled to save runner minutes.
+
+---
+
+## 📮 Postman Collection
+
+**File:** [`Fundsroom_Operations_Portal.postman_collection.json`](./Fundsroom_Operations_Portal.postman_collection.json)
+
+- Auto-extracts and stores `{{token}}` after running the Login request.
+- Covers all positive and negative edge cases: invalid stock, duplicate SKU, role guards, insufficient auth.
 
 ---
 
 ## ✅ Feature Verification Checklist
 
-- [x] **JWT Auth & RBAC**: Invalid credentials return 401; missing token returns 401; unauthorized role operations return 403.
-- [x] **Customer CRM**: Creating customers, status/type filters, searching, and adding persistent follow-up timeline entries.
-- [x] **Product Catalog**: Duplicate SKU creation rejected with 409 Conflict; low-stock indicators trigger accurately.
-- [x] **Stock Ledger**: Inward receipts increment stock and log IN movements.
-- [x] **Sales Challan Snapshot**: Line items retain snapshot values unaffected by subsequent product price updates.
-- [x] **Atomic Confirmation**: Hard block if requested quantity exceeds current stock; atomic deduction and OUT movement creation upon confirmation.
-- [x] **Official PDF Export**: Server-side vector PDF generation using historical snapshot data, customer info, and multi-page pagination.
-- [x] **AWS S3 Image Upload**: Authenticated image upload, safe key structure, 5 MB limit, MIME validation, and database metadata persistence.
-- [x] **Zero Secret Exposure**: CI and Git operate without real AWS credentials via isolated test mocking (33/33 integration tests passing).
-- [x] **Production Builds & Docker**: Backend and frontend multi-stage container builds pass with zero warnings or errors.
+- [x] JWT Auth & RBAC — Invalid credentials return 401; unauthorized role operations return 403
+- [x] Customer CRM — Create, edit, search, status filters, append-only follow-up timeline
+- [x] Product Catalog — Duplicate SKU rejected with 409; low-stock badge triggers accurately
+- [x] Stock Ledger — IN movements increment stock; full paginated audit trail
+- [x] Sales Challan Snapshots — Snapshot data unaffected by later price or name edits
+- [x] Atomic Stock Confirmation — Shortage blocks entire transaction; success creates OUT movement atomically
+- [x] PDF Invoice Export — Server-side vector PDF with snapshot data, GSTIN, and signature block
+- [x] AWS S3 Integration — Magic-byte validation, 5 MB limit, UUID keys, safe replacement and deletion
+- [x] Zero Secret Exposure — CI is credential-free; S3 fully mocked in tests
+- [x] SPA Routing — vercel.json rewrites ensure all direct URLs and page refreshes work
+- [x] Docker & CI — Multi-stage containers and full pipeline pass with zero warnings
+
+---
+
+## 🏗️ Key Engineering Assumptions
+
+1. **Internal B2B Model**: Public self-registration is omitted. Users are provisioned by Admin with predefined roles.
+2. **All-or-Nothing Dispatch**: If any single SKU is out of stock, the entire challan confirmation fails — no partial dispatches.
+3. **Private Cloud Storage**: S3 enforces Block Public Access. Images are accessed via server-mediated tokens only.
+4. **Immutable Challan Records**: Confirmed challans are append-only for legal and audit integrity.
 
 ---
 
 ## 📄 License
-This project is submitted as part of the Fundsroom Full Stack Developer assessment.
 
+This project is submitted as a technical case study for the Fundsroom Full Stack Developer assessment.
+
+**Candidate:** Balaji Goondla | **GitHub:** [GoondlaBalaji](https://github.com/GoondlaBalaji)
