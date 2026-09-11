@@ -1,5 +1,7 @@
 # 🏢 Fundsroom Mini ERP + CRM Operations Portal
 
+[![CI / CD Pipeline](https://github.com/GoondlaBalaji/fundsroom-operations-portal/actions/workflows/ci.yml/badge.svg)](https://github.com/GoondlaBalaji/fundsroom-operations-portal/actions/workflows/ci.yml)
+
 > **Full Stack Developer Case Study** — Wholesale & Distribution Operations Management System built with Node.js, Express, TypeScript, PostgreSQL (Prisma ORM), React, and Vite.
 
 ---
@@ -444,6 +446,74 @@ npm test
 npm run test:integration
 ```
 *Current result: 5 test suites, 16 tests passing, 0 failures, 0 skipped.*
+
+---
+
+## 🚀 Continuous Integration & Deployment (CI/CD)
+
+The repository features an automated GitHub Actions CI/CD workflow located at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) providing fast, deterministic regression testing on every push and pull request.
+
+### Pipeline Architecture
+
+```text
+               GitHub Repository
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+      Push to main/master    Pull Request
+             │                   │
+             └─────────┬─────────┘
+                       ▼
+                 GitHub Actions
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+             ▼                   ▼
+        Backend CI          Frontend CI
+             │                   │
+     PostgreSQL (Service)   npm ci (cached)
+             │                   │
+     Prisma db push         npm run build (Vite)
+             │
+     Integration Tests (16/16)
+             │
+     Backend Build (tsc)
+             │                   │
+             └─────────┬─────────┘
+                       ▼
+             Docker Build Validation
+            (docker compose build)
+                       ▼
+                  PASS / FAIL
+```
+
+### Pipeline Jobs & Verification Stages
+
+1. **Backend CI (`backend-ci`)**:
+   - **Environment**: Ubuntu Latest, Node.js 20 (`actions/setup-node` with npm caching).
+   - **Ephemeral Database**: Spins up a dedicated `postgres:15-alpine` service container with automated health checks (`pg_isready`).
+   - **Prisma Schema Sync**: Initializes test database schema safely using `npx prisma db push --skip-generate` without requiring fragile migrations.
+   - **Integration Test Suite**: Runs Jest + Supertest (`npm test`), verifying 16 integration test cases covering RBAC, challan confirmation, atomic rollback, and concurrency locks.
+   - **Production Compilation**: Executes TypeScript compiler (`npm run build`).
+
+2. **Frontend CI (`frontend-ci`)**:
+   - **Environment**: Ubuntu Latest, Node.js 20 with npm caching.
+   - **Deterministic Install**: `npm ci` verifies `package-lock.json` consistency.
+   - **Production Bundle**: Executes `npm run build` (`tsc -b && vite build`) ensuring strict type-safety and bundle optimization.
+
+3. **Docker Build Validation (`docker-validation`)**:
+   - Runs concurrently after backend and frontend validations pass.
+   - Executes `docker compose build` to verify multi-stage Dockerfiles and container configurations remain fully functional without regressions.
+
+### Security & Compliance
+- **Least-Privilege Permissions**: Explicitly configured with read-only repository permissions (`contents: read`).
+- **Zero Secret Exposure**: CI runs exclusively against ephemeral, isolated test credentials. No AWS, RDS, production credentials, or sensitive secrets are committed or required.
+- **Concurrency Control**: Outdated in-flight builds on the same branch are automatically cancelled (`cancel-in-progress: true`), optimizing GitHub Actions runner minutes.
+
+### Branch Protection Recommendation (Optional)
+Repository administrators can optionally enable branch protection under **GitHub Repository Settings → Branches → Add rule for `main`**:
+- Check **"Require status checks to pass before merging"**
+- Require status checks: `Backend CI (Tests & Build)`, `Frontend CI (Build Verification)`, and `Docker Build Validation`.
 
 ---
 
