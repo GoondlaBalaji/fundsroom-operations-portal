@@ -30,6 +30,21 @@ export const challansController = {
     }
   },
 
+  async exportPdf(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { buffer, challanNumber } = await challansService.generatePdf(id);
+      const safeFilename = `${challanNumber.replace(/[^a-zA-Z0-9._-]/g, '_')}.pdf`;
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+      res.setHeader('Content-Length', buffer.length);
+      res.status(200).send(buffer);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = createChallanSchema.parse(req.body);

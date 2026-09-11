@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, CheckCircle2, XCircle, Printer, MapPin
+  ArrowLeft, CheckCircle2, XCircle, Printer, MapPin, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { challansApi } from '../api/challans.api';
@@ -19,6 +19,7 @@ export const SalesChallanDetail: React.FC = () => {
 
   const [challan, setChallan] = useState<Challan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // Modals & Actions
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -81,6 +82,19 @@ export const SalesChallanDetail: React.FC = () => {
     window.print();
   };
 
+  const handleExportPdf = async () => {
+    if (!challan) return;
+    setExportingPdf(true);
+    try {
+      await challansApi.downloadPdf(challan.id, challan.challanNumber);
+      toast.success(`PDF invoice for ${challan.challanNumber} downloaded!`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to export PDF invoice');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   if (loading) return <PageSpinner />;
   if (!challan) return null;
 
@@ -103,8 +117,17 @@ export const SalesChallanDetail: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+              title="Download official PDF invoice document"
+            >
+              <Download size={15} /> {exportingPdf ? 'Exporting...' : 'Export PDF'}
+            </button>
+
             <button className="btn btn-secondary btn-sm" onClick={handlePrint}>
-              <Printer size={15} /> Print / Save PDF
+              <Printer size={15} /> Print
             </button>
 
             {challan.status === 'DRAFT' && canConfirm && (

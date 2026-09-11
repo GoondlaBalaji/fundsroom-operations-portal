@@ -5,6 +5,8 @@ import { generateChallanNumber } from '../../utils/challanNumber';
 import { ChallanStatus, MovementType } from '../../types/enums';
 import type { CreateChallanInput, CancelChallanInput } from './challans.schema';
 
+import { generateChallanPdf } from './challans.pdf';
+
 export const challansService = {
   async list(params: {
     page: number;
@@ -57,6 +59,24 @@ export const challansService = {
 
     if (!challan) throw createError.notFound('Challan');
     return challan;
+  },
+
+  async generatePdf(id: string) {
+    const challan = await prisma.challan.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    if (!challan) throw createError.notFound('Challan');
+
+    const buffer = await generateChallanPdf(challan as any);
+    return { buffer, challanNumber: challan.challanNumber };
   },
 
   async create(input: CreateChallanInput, userId: string) {

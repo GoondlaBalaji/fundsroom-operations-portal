@@ -366,6 +366,7 @@ All protected endpoints require `Authorization: Bearer <token>`.
 | `GET` | `/api/challans/:id` | Authenticated | Full challan detail with line items & audit trail |
 | `POST` | `/api/challans/:id/confirm` | Admin, Warehouse, Sales | Validate stock, deduct inventory, mark confirmed |
 | `POST` | `/api/challans/:id/cancel` | Admin, Sales | Cancel draft challan |
+| `GET` | `/api/challans/:id/pdf` | Authenticated | Exports a challan as a PDF using persisted challan/customer data and historical product snapshots |
 
 ---
 
@@ -525,6 +526,7 @@ Repository administrators can optionally enable branch protection under **GitHub
 - [x] **Stock Ledger**: Inward receipts increment stock and log IN movements.
 - [x] **Sales Challan Snapshot**: Line items retain snapshot values unaffected by subsequent product price updates.
 - [x] **Atomic Confirmation**: Hard block if requested quantity exceeds current stock; atomic deduction and OUT movement creation upon confirmation.
+- [x] **Official PDF Export**: Server-side vector PDF generation using historical snapshot data, customer info, and multi-page pagination.
 - [x] **Production Builds & Docker**: Backend and frontend multi-stage container builds pass with zero warnings or errors.
 
 ---
