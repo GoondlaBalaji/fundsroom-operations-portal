@@ -189,17 +189,45 @@ For rapid testing and evaluation, the portal includes pre-seeded accounts with q
 
 ---
 
-### Option A: 1-Click Launch via Docker Compose (Recommended)
+### Option A: Production-Ready Docker Compose Setup (Recommended)
 
-Run all services (PostgreSQL 15, Backend API, and Frontend SPA) with a single command:
+Run all services (**PostgreSQL 15**, **Compiled Node.js Backend**, and **Production Nginx React SPA**) with a single command:
 
 ```bash
-docker-compose up --build
+docker compose up --build
+```
+Or run in the background (detached):
+```bash
+docker compose up -d
 ```
 
-- **Frontend Application**: `http://localhost:5173`
-- **Backend API**: `http://localhost:4000/api`
-- **PostgreSQL Database**: `localhost:5432`
+#### Service URLs:
+- **Frontend Operations Portal**: `http://localhost:5173`
+- **Backend REST API**: `http://localhost:4000/api`
+- **Health Check**: `http://localhost:4000/health`
+- **PostgreSQL Database**: `localhost:5433` (mapped from container `5432`)
+
+#### Container Management Commands:
+- **View Live Logs**:
+  ```bash
+  docker compose logs -f backend
+  docker compose logs -f frontend
+  ```
+- **Stop Containers (Preserves DB Data Volume)**:
+  ```bash
+  docker compose down
+  ```
+- **Reset Database & Clean Volumes (Destructive)**:
+  ```bash
+  docker compose down -v
+  docker compose up --build
+  ```
+  > ⚠️ **Warning**: `docker compose down -v` permanently removes the `postgres_data` volume and all stored database records.
+
+#### Database Initialization Strategy in Docker:
+The backend container runs an automated, production-grade entrypoint script (`docker-entrypoint.sh`):
+1. **Schema Synchronization**: Executes `npx prisma db push` upon container startup, ensuring all tables, enums, and foreign-key relations exist.
+2. **Idempotent Demo Seeding**: Checks if user records exist. If a fresh volume is detected (0 users), it automatically executes pre-compiled demo seed data (`dist/prisma/seed.js`), creating all 4 demo role accounts, sample catalog items, customers, and challans. If data already exists, seeding is safely skipped.
 
 ---
 
@@ -405,7 +433,21 @@ A complete, production-ready Postman collection is included in the project root:
 
 ---
 
-## 🧪 Testing & Verification Checklist
+## 🧪 Automated Testing & QA Verification
+### Running the Integration Test Suite
+The project includes a comprehensive automated test suite (Jest + Supertest) testing authentication, RBAC, single & multi-item challan confirmation, atomic rollback, and concurrency race conditions against real PostgreSQL:
+
+```bash
+cd backend
+npm test
+# or
+npm run test:integration
+```
+*Current result: 5 test suites, 16 tests passing, 0 failures, 0 skipped.*
+
+---
+
+## ✅ Feature Verification Checklist
 
 - [x] **JWT Auth & RBAC**: Invalid credentials return 401; missing token returns 401; unauthorized role operations return 403.
 - [x] **Customer CRM**: Creating customers, status/type filters, searching, and adding persistent follow-up timeline entries.
@@ -413,7 +455,7 @@ A complete, production-ready Postman collection is included in the project root:
 - [x] **Stock Ledger**: Inward receipts increment stock and log IN movements.
 - [x] **Sales Challan Snapshot**: Line items retain snapshot values unaffected by subsequent product price updates.
 - [x] **Atomic Confirmation**: Hard block if requested quantity exceeds current stock; atomic deduction and OUT movement creation upon confirmation.
-- [x] **Production Builds**: Backend and frontend TypeScript compilations pass with zero warnings or errors.
+- [x] **Production Builds & Docker**: Backend and frontend multi-stage container builds pass with zero warnings or errors.
 
 ---
 

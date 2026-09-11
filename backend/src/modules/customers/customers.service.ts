@@ -55,7 +55,18 @@ export const customersService = {
             createdBy: { select: { id: true, name: true } },
           },
         },
-        _count: { select: { challans: true } },
+        challans: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            challanNumber: true,
+            status: true,
+            totalQuantity: true,
+            totalAmount: true,
+            createdAt: true,
+          },
+        },
+        _count: { select: { challans: true, followUps: true } },
       },
     });
 

@@ -1,4 +1,5 @@
 # frontend/Dockerfile
+# Build Stage
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -7,8 +8,14 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# Pass API base URL (defaults to /api so nginx reverse-proxies to backend seamlessly)
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
+# Production Static Server Stage
 FROM nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html

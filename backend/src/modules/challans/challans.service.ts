@@ -128,65 +128,57 @@ export const challansService = {
   },
 
   async confirm(id: string, userId: string) {
-    const challan = await prisma.challan.findUnique({
-      where: { id },
-      include: { items: true },
-    });
-
-    if (!challan) throw createError.notFound('Challan');
-
-    if (challan.status !== ChallanStatus.DRAFT) {
-      throw createError.businessRule(
-        `Cannot confirm challan with status '${challan.status}'. Only DRAFT challans can be confirmed.`
-      );
-    }
-
-    // Pre-validate all stock BEFORE starting the transaction
-    const productIds = challan.items.map((i: any) => i.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-    });
-
-    const productMap = new Map(products.map((p: any) => [p.id, p]));
-
-    const stockErrors: Array<{
-      productId: string;
-      productName: string;
-      productSku: string;
-      available: number;
-      requested: number;
-    }> = [];
-
-    for (const item of challan.items) {
-      const product = productMap.get((item as any).productId) as any;
-      if (!product) {
-        throw createError.notFound(`Product with ID ${(item as any).productId} no longer exists`);
-      }
-      if (product.stock < (item as any).quantity) {
-        stockErrors.push({
-          productId: product.id,
-          productName: (item as any).snapshotName,
-          productSku: (item as any).snapshotSku,
-          available: product.stock,
-          requested: (item as any).quantity,
-        });
-      }
-    }
-
-    if (stockErrors.length > 0) {
-      throw createError.insufficientStock(stockErrors);
-    }
-
-    // All stock validated — run the atomic transaction
     const confirmedChallan = await prisma.$transaction(async (tx: any) => {
-      // Deduct stock and create OUT movements for each item
+      // 1. Load challan and verify it exists inside the transaction
+      const challan = await tx.challan.findUnique({
+        where: { id },
+        include: { items: true },
+      });
+
+      if (!challan) throw createError.notFound('Challan');
+
+      // 2. Verify status is DRAFT
+      if (challan.status !== ChallanStatus.DRAFT) {
+        throw createError.businessRule(
+          `Cannot confirm challan with status '${challan.status}'. Only DRAFT challans can be confirmed.`
+        );
+      }
+
+      // 3. Conditionally deduct stock and create OUT movements atomically
       for (const item of challan.items) {
         const i = item as any;
-        await tx.product.update({
-          where: { id: i.productId },
-          data: { stock: { decrement: i.quantity } },
+
+        // Atomic conditional decrement: Only succeeds if current on-hand stock >= requested quantity
+        const result = await tx.product.updateMany({
+          where: {
+            id: i.productId,
+            stock: { gte: i.quantity },
+          },
+          data: {
+            stock: { decrement: i.quantity },
+          },
         });
 
+        // If count is not 1, stock was insufficient (or concurrent confirmation consumed it)
+        if (result.count !== 1) {
+          const currentProd = await tx.product.findUnique({
+            where: { id: i.productId },
+            select: { id: true, name: true, sku: true, stock: true },
+          });
+
+          const available = currentProd ? currentProd.stock : 0;
+          throw createError.insufficientStock([
+            {
+              productId: i.productId,
+              productName: i.snapshotName,
+              productSku: i.snapshotSku,
+              available,
+              requested: i.quantity,
+            },
+          ]);
+        }
+
+        // Record OUT stock movement for this line item
         await tx.stockMovement.create({
           data: {
             productId: i.productId,
@@ -199,7 +191,7 @@ export const challansService = {
         });
       }
 
-      // Update challan status
+      // 4. Update challan status to CONFIRMED
       const updated = await tx.challan.update({
         where: { id },
         data: {

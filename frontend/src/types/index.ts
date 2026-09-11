@@ -30,6 +30,8 @@ export interface Customer {
   createdAt: string;
   updatedAt: string;
   _count?: { followUps: number; challans: number };
+  challans?: Challan[];
+  followUps?: CustomerFollowUp[];
 }
 
 export interface CustomerFollowUp {
