@@ -1,6 +1,7 @@
 // src/modules/products/products.service.ts
 import { prisma } from '../../config/database';
 import { createError } from '../../utils/AppError';
+import { s3Service } from '../../services/s3.service';
 import type { CreateProductInput, UpdateProductInput } from './products.schema';
 
 export const productsService = {
@@ -23,7 +24,7 @@ export const productsService = {
 
       const data = await prisma.$queryRawUnsafe<any[]>(`
         SELECT p.id, p.name, p.sku, p.category, p."unitPrice", p.stock, p."minStockAlert",
-               p."warehouseLocation", p."isActive", p."createdAt", p."updatedAt"
+               p."warehouseLocation", p."imageKey", p."imageUrl", p."isActive", p."createdAt", p."updatedAt"
         FROM products p
         WHERE p."isActive" = true
         AND p.stock < p."minStockAlert"
@@ -144,5 +145,72 @@ export const productsService = {
       orderBy: { category: 'asc' },
     });
     return categories.map((c: { category: string }) => c.category);
+  },
+
+  async uploadImage(productId: string, file: Express.Multer.File) {
+    const product = await prisma.product.findFirst({
+      where: { id: productId, isActive: true },
+    });
+    if (!product) {
+      throw createError.notFound('Product');
+    }
+
+    const oldImageKey = product.imageKey;
+
+    // Upload new image to S3
+    const { imageKey, imageUrl } = await s3Service.uploadProductImage(productId, file);
+
+    // Update database record
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        imageKey,
+        imageUrl,
+      },
+      include: {
+        createdBy: { select: { id: true, name: true } },
+      },
+    });
+
+    // Safely cleanup old S3 object if replacing
+    if (oldImageKey && oldImageKey !== imageKey) {
+      try {
+        await s3Service.deleteProductImage(oldImageKey);
+      } catch (err) {
+        console.warn(`[S3] Failed to delete old image ${oldImageKey}:`, err);
+      }
+    }
+
+    return {
+      product: updated,
+      imageKey,
+      imageUrl,
+    };
+  },
+
+  async deleteImage(productId: string) {
+    const product = await prisma.product.findFirst({
+      where: { id: productId, isActive: true },
+    });
+    if (!product) {
+      throw createError.notFound('Product');
+    }
+
+    if (product.imageKey) {
+      await s3Service.deleteProductImage(product.imageKey);
+    }
+
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        imageKey: null,
+        imageUrl: null,
+      },
+      include: {
+        createdBy: { select: { id: true, name: true } },
+      },
+    });
+
+    return updated;
   },
 };

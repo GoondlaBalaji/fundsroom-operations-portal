@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Plus, Search, Edit, AlertTriangle,
-  X, MapPin
+  X, MapPin, Image as ImageIcon, UploadCloud, Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { productsApi } from '../api/products.api';
@@ -30,6 +30,9 @@ export const Products: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [deletingImage, setDeletingImage] = useState(false);
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -85,6 +88,8 @@ export const Products: React.FC = () => {
 
   const openCreateModal = () => {
     setEditingProduct(null);
+    setSelectedFile(null);
+    setPreviewUrl(null);
     setFormData({
       name: '',
       sku: '',
@@ -99,6 +104,8 @@ export const Products: React.FC = () => {
 
   const openEditModal = (p: Product) => {
     setEditingProduct(p);
+    setSelectedFile(null);
+    setPreviewUrl(p.imageUrl || null);
     setFormData({
       name: p.name,
       sku: p.sku,
@@ -109,6 +116,43 @@ export const Products: React.FC = () => {
       warehouseLocation: p.warehouseLocation || '',
     });
     setModalOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Product image must be 5 MB or smaller');
+        return;
+      }
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!validTypes.includes(file.type.toLowerCase())) {
+        toast.error('Only JPEG, PNG, WebP, and GIF images are supported');
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    if (!editingProduct) {
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      return;
+    }
+    setDeletingImage(true);
+    try {
+      await productsApi.deleteImage(editingProduct.id);
+      toast.success('Product image removed');
+      setPreviewUrl(null);
+      setSelectedFile(null);
+      fetchProducts();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to remove product image');
+    } finally {
+      setDeletingImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,9 +167,18 @@ export const Products: React.FC = () => {
           minStockAlert: Number(formData.minStockAlert),
           warehouseLocation: formData.warehouseLocation.trim() || undefined,
         });
+
+        if (selectedFile) {
+          try {
+            await productsApi.uploadImage(editingProduct.id, selectedFile);
+          } catch (imgErr: any) {
+            toast.error(imgErr.response?.data?.message || 'Image upload failed');
+          }
+        }
+
         toast.success('Product updated');
       } else {
-        await productsApi.create({
+        const newProduct = await productsApi.create({
           name: formData.name.trim(),
           sku: formData.sku.trim().toUpperCase(),
           category: formData.category.trim(),
@@ -134,6 +187,16 @@ export const Products: React.FC = () => {
           minStockAlert: Number(formData.minStockAlert),
           warehouseLocation: formData.warehouseLocation.trim() || undefined,
         });
+
+        if (selectedFile && newProduct?.id) {
+          try {
+            await productsApi.uploadImage(newProduct.id, selectedFile);
+          } catch (imgErr: any) {
+            console.error('Image upload failed after product creation', imgErr);
+            toast.error('Product created, but image upload failed');
+          }
+        }
+
         toast.success('Product created');
         fetchCategories();
       }
@@ -250,9 +313,40 @@ export const Products: React.FC = () => {
                     return (
                       <tr key={p.id}>
                         <td>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                          <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-accent)' }}>
-                            {p.sku}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div
+                              style={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 6,
+                                overflow: 'hidden',
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--border-default)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {p.imageUrl ? (
+                                <img
+                                  src={p.imageUrl}
+                                  alt={p.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <ImageIcon size={18} style={{ color: 'var(--text-muted)' }} />
+                              )}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                              <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-accent)' }}>
+                                {p.sku}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td>
@@ -347,6 +441,84 @@ export const Products: React.FC = () => {
 
             <form onSubmit={handleSubmit}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* S3 Product Image Upload Section */}
+                <div>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Product Image (Amazon S3)</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Optional · Max 5 MB</span>
+                  </label>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 16,
+                      padding: 12,
+                      border: '1px dashed var(--border-default)',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--bg-elevated)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 6,
+                        overflow: 'hidden',
+                        background: 'var(--bg-surface)',
+                        border: '1px solid var(--border-default)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt="Product Preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <ImageIcon size={22} style={{ color: 'var(--text-muted)' }} />
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <label
+                          className="btn btn-secondary btn-sm"
+                          style={{ cursor: 'pointer', margin: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <UploadCloud size={14} />
+                          {previewUrl ? 'Change Image' : 'Select Image'}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            onChange={handleFileChange}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+
+                        {(previewUrl || selectedFile) && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={handleDeleteImage}
+                            disabled={deletingImage}
+                            style={{ color: '#ef4444' }}
+                          >
+                            {deletingImage ? <Spinner size="sm" /> : <Trash2 size={14} />}
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 5 }}>
+                        Formats: JPEG, PNG, WebP, GIF. Private bucket storage with controlled access.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="form-label">Product Name *</label>
                   <input

@@ -16,4 +16,17 @@ export const productsApi = {
 
   getCategories: () =>
     apiClient.get('/products/categories').then((r) => r.data.data),
+
+  uploadImage: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiClient
+      .post(`/products/${id}/image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
+
+  deleteImage: (id: string) =>
+    apiClient.delete(`/products/${id}/image`).then((r) => r.data),
 };

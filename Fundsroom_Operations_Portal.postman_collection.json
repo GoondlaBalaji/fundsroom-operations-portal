@@ -275,6 +275,46 @@
               "variable": [{ "key": "id", "value": "replace-with-product-id" }]
             }
           }
+        },
+        {
+          "name": "Upload Product Image (Amazon S3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "description": "Product image file (JPEG, PNG, WebP, GIF, max 5 MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/:id/image",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", ":id", "image"],
+              "variable": [{ "key": "id", "value": "replace-with-product-id" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Product Image (Amazon S3)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/:id/image",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", ":id", "image"],
+              "variable": [{ "key": "id", "value": "replace-with-product-id" }]
+            }
+          }
         }
       ]
     },

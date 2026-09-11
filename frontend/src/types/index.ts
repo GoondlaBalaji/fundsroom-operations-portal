@@ -53,6 +53,8 @@ export interface Product {
   stock: number;
   minStockAlert: number;
   warehouseLocation?: string;
+  imageKey?: string | null;
+  imageUrl?: string | null;
   isActive: boolean;
   createdById: string;
   createdBy?: { id: string; name: string };

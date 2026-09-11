@@ -34,6 +34,9 @@ export const createError = {
   conflict: (message: string) =>
     new AppError(message, 409, 'CONFLICT'),
 
+  badRequest: (message: string, details?: unknown) =>
+    new AppError(message, 400, 'BAD_REQUEST', details),
+
   validation: (message: string, details?: unknown) =>
     new AppError(message, 400, 'VALIDATION_ERROR', details),
 

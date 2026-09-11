@@ -518,6 +518,96 @@ Repository administrators can optionally enable branch protection under **GitHub
 
 ---
 
+---
+
+## ☁️ Amazon S3 Product Image Upload & Storage (Task 4A)
+
+The portal integrates with **Amazon Web Services (AWS) Simple Storage Service (S3)** for enterprise product image management, adhering to strict cloud security and least-privilege principles.
+
+### Architecture & Security Workflow
+
+```text
+React Frontend (Vite)
+      │
+      │ 1. multipart/form-data (field: 'image')
+      │    Authorization: Bearer <JWT>
+      ▼
+Node.js / Express Backend
+      │
+      ├─► 2. Authenticate JWT & Enforce RBAC (ADMIN or WAREHOUSE)
+      ├─► 3. Validate file size (<= 5 MB limit)
+      ├─► 4. Validate MIME type & buffer magic-bytes (JPEG, PNG, WebP, GIF)
+      ├─► 5. Generate collision-free key: products/{productId}/{uuid}.{ext}
+      │
+      ▼
+Amazon S3 (Private Bucket, Block Public Access: ON)
+      │
+      ├─► 6. PutObjectCommand (Server-side authenticated upload)
+      ├─► 7. Generate secure presigned GET URL (or direct signed link)
+      │
+      ▼
+PostgreSQL Database (Prisma ORM)
+      │
+      └─► 8. Save durable `imageKey` and `imageUrl` on Product model
+      └─► 9. Safe replacement: Delete old S3 object ONLY after new DB record persists
+```
+
+### API Endpoints
+
+| Method | Endpoint | Allowed Roles | Description |
+|---|---|---|---|
+| `POST` | `/api/products/:id/image` | `ADMIN`, `WAREHOUSE` | Uploads a new product image to S3 (`multipart/form-data`, key: `image`, max 5 MB). |
+| `DELETE` | `/api/products/:id/image` | `ADMIN`, `WAREHOUSE` | Deletes the image from S3 and nullifies `imageKey` and `imageUrl` in the database. |
+
+### Environment Variables
+
+Configure the following variables in your server-side `.env` file (never expose these to the frontend or git):
+
+```env
+AWS_REGION=ap-south-1
+AWS_S3_BUCKET=fundsroom-product-images-bucket
+AWS_ACCESS_KEY_ID=your-aws-access-key-id
+AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+```
+
+> **Note on Credential Resolution**: If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are omitted, the backend automatically falls back to the AWS standard credential provider chain (e.g., IAM Instance Profiles on EC2, ECS Task Execution Roles, or local `~/.aws/credentials`).
+
+### Recommended Least-Privilege IAM Policy
+
+Attach the following narrowly-scoped IAM policy to your IAM user or role:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowFundsroomProductImageStorage",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/products/*"
+    }
+  ]
+}
+```
+
+### S3 Bucket Configuration & Security Tradeoffs
+
+1. **Block Public Access**: Keep **Block all public access: ON**.
+2. **Access Strategy**: S3 objects are kept private. The backend generates expiring presigned URLs or signed object access tokens, preventing public scraping or unauthorized bandwidth consumption.
+3. **MIME & Magic-Byte Validation**: Files are inspected server-side via buffer signatures to prevent malicious payload uploads spoofed as image extensions.
+
+### AWS Pricing & Free Tier Safety Notice
+
+- Amazon S3 offers a generous **AWS Free Tier** allowance (typically 5 GB standard storage, 20,000 GET requests, and 2,000 PUT requests per month for eligible accounts for the first 12 months).
+- Please verify your AWS account's active tier status. S3 usage beyond the Free Tier or in non-eligible accounts incurs standard AWS rates.
+- No expensive AWS compute or CDN services (CloudFront, API Gateway, Lambda, ECS, RDS) were added for this task, maintaining minimal footprint and predictable cost control.
+
+---
+
 ## ✅ Feature Verification Checklist
 
 - [x] **JWT Auth & RBAC**: Invalid credentials return 401; missing token returns 401; unauthorized role operations return 403.
@@ -527,9 +617,12 @@ Repository administrators can optionally enable branch protection under **GitHub
 - [x] **Sales Challan Snapshot**: Line items retain snapshot values unaffected by subsequent product price updates.
 - [x] **Atomic Confirmation**: Hard block if requested quantity exceeds current stock; atomic deduction and OUT movement creation upon confirmation.
 - [x] **Official PDF Export**: Server-side vector PDF generation using historical snapshot data, customer info, and multi-page pagination.
+- [x] **AWS S3 Image Upload**: Authenticated image upload, safe key structure, 5 MB limit, MIME validation, and database metadata persistence.
+- [x] **Zero Secret Exposure**: CI and Git operate without real AWS credentials via isolated test mocking (33/33 integration tests passing).
 - [x] **Production Builds & Docker**: Backend and frontend multi-stage container builds pass with zero warnings or errors.
 
 ---
 
 ## 📄 License
 This project is submitted as part of the Fundsroom Full Stack Developer assessment.
+

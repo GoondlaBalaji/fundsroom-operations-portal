@@ -108,6 +108,8 @@ model Product {
   stock             Int      @default(0)
   minStockAlert     Int      @default(0)
   warehouseLocation String?  @db.VarChar(100)
+  imageKey          String?  @db.VarChar(255)
+  imageUrl          String?  @db.VarChar(1000)
   isActive          Boolean  @default(true)
   createdById       String
   createdAt         DateTime @default(now())

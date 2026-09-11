@@ -5,6 +5,8 @@ import { createProductSchema, updateProductSchema } from './products.schema';
 import { sendSuccess, sendPaginated } from '../../utils/apiResponse';
 import { getPagination } from '../../utils/pagination';
 
+import { createError } from '../../utils/AppError';
+
 export const productsController = {
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -53,6 +55,32 @@ export const productsController = {
     try {
       const categories = await productsService.getCategories();
       sendSuccess(res, categories);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async uploadImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.file) {
+        throw createError.badRequest('No image file provided. Key must be "image"');
+      }
+      const result = await productsService.uploadImage(req.params.id, req.file);
+      sendSuccess(
+        res,
+        { imageKey: result.imageKey, imageUrl: result.imageUrl },
+        200,
+        'Product image uploaded successfully'
+      );
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async deleteImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await productsService.deleteImage(req.params.id);
+      sendSuccess(res, null, 200, 'Product image deleted successfully');
     } catch (err) {
       next(err);
     }
