@@ -275,7 +275,7 @@ export const SalesChallanDetail: React.FC = () => {
         <div style={{ marginBottom: 28 }}>
           <table className="table" style={{ width: '100%' }}>
             <thead>
-              <tr style={{ background: 'var(--bg-overlay)' }}>
+              <tr style={{ background: 'var(--bg-subtle)' }}>
                 <th style={{ width: '5%', textAlign: 'center' }}>#</th>
                 <th style={{ width: '45%' }}>Item Description (Snapshot)</th>
                 <th style={{ width: '20%' }}>SKU</th>

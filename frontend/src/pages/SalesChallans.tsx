@@ -368,10 +368,10 @@ export const SalesChallans: React.FC = () => {
                           key={idx}
                           style={{
                             display: 'grid',
-                            gridTemplateColumns: '2fr 1fr 1fr auto',
+                            gridTemplateColumns: '2.5fr 1fr 1.2fr auto',
                             gap: 10,
                             alignItems: 'center',
-                            background: 'var(--bg-elevated)',
+                            background: 'var(--bg-subtle)',
                             padding: '10px 12px',
                             borderRadius: 'var(--radius-sm)',
                             border: '1px solid var(--border-default)',
@@ -407,7 +407,7 @@ export const SalesChallans: React.FC = () => {
                             />
                           </div>
 
-                          <div style={{ textAlign: 'right', fontSize: '0.85rem', fontWeight: 600 }}>
+                          <div style={{ textAlign: 'right', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                             ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </div>
 
@@ -418,9 +418,9 @@ export const SalesChallans: React.FC = () => {
                               onClick={() => handleRemoveItem(idx)}
                               title="Remove item"
                               disabled={items.length <= 1}
-                              style={{ color: '#f87171' }}
+                              style={{ color: 'var(--action-reject)' }}
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </div>
@@ -431,8 +431,8 @@ export const SalesChallans: React.FC = () => {
 
                 {/* Summary Box */}
                 <div style={{
-                  background: 'var(--bg-overlay)',
-                  padding: '12px 16px',
+                  background: 'var(--bg-subtle)',
+                  padding: '14px 18px',
                   borderRadius: 'var(--radius-sm)',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -440,12 +440,12 @@ export const SalesChallans: React.FC = () => {
                   border: '1px solid var(--border-default)'
                 }}>
                   <div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Units: </span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{summary.qty} units</strong>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Units: </span>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{summary.qty} units</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Estimated Value: </span>
-                    <strong style={{ color: 'var(--text-accent)', fontSize: '1.1rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Estimated Value: </span>
+                    <strong style={{ color: 'var(--action-approve)', fontSize: '1.15rem', fontWeight: 700 }}>
                       ₹{summary.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </strong>
                   </div>
