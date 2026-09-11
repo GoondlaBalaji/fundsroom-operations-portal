@@ -25,21 +25,24 @@ export const App: React.FC = () => {
           toastOptions={{
             duration: 3500,
             style: {
-              background: '#1a2236',
-              color: '#f1f5f9',
-              border: '1px solid rgba(99, 120, 160, 0.25)',
-              fontSize: '0.875rem',
+              background: '#FFFFFF',
+              color: '#18181B',
+              border: '1px solid #E2DDD5',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.08)',
+              fontSize: '0.85rem',
+              fontWeight: 500,
+              borderRadius: '4px',
             },
             success: {
               iconTheme: {
-                primary: '#34d399',
-                secondary: '#111827',
+                primary: '#15803D',
+                secondary: '#FFFFFF',
               },
             },
             error: {
               iconTheme: {
-                primary: '#f87171',
-                secondary: '#111827',
+                primary: '#991B1B',
+                secondary: '#FFFFFF',
               },
             },
           }}

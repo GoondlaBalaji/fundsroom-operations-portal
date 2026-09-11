@@ -1,7 +1,7 @@
 // src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Shield, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
@@ -47,11 +47,15 @@ export const Login: React.FC = () => {
       <div className="login-card animate-in">
         <div className="login-logo">
           <div className="login-logo-icon">
-            <Building2 size={26} color="white" />
+            <Shield size={20} color="white" />
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Fundsroom ERP</h1>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-            Operations Portal — Sign in to continue
+          <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 2, letterSpacing: '-0.4px' }}>Fundsroom ERP</h1>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '2px 0 8px' }}>
+            <span className="topbar-committee-pill">OPERATIONS DESK</span>
+            <span className="badge badge-active" style={{ fontSize: '9.5px' }}>● LIVE APPRAISAL</span>
+          </div>
+          <p style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
+            Institutional Operations Portal — Authenticate to access desk
           </p>
         </div>
 

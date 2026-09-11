@@ -71,62 +71,62 @@ export const Dashboard: React.FC = () => {
       {/* KPI Stats Grid */}
       <div className="stats-grid">
         <div className="stat-card" onClick={() => navigate('/customers')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon-wrapper" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
-            <Users size={22} />
+          <div className="stat-icon-wrapper" style={{ background: '#F4F1EA', color: '#18181B' }}>
+            <Users size={20} />
           </div>
           <div className="stat-value">{stats?.totalCustomers ?? 0}</div>
           <div className="stat-label">Total Customers</div>
-          <div className="stat-footer" style={{ color: '#60a5fa' }}>
-            View customers <ArrowRight size={12} />
+          <div className="stat-footer" style={{ color: '#18181B' }}>
+            View dossier <ArrowRight size={12} />
           </div>
         </div>
 
         <div className="stat-card" onClick={() => navigate('/products')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon-wrapper" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc' }}>
-            <Package size={22} />
+          <div className="stat-icon-wrapper" style={{ background: '#F4F1EA', color: '#18181B' }}>
+            <Package size={20} />
           </div>
           <div className="stat-value">{stats?.totalProducts ?? 0}</div>
           <div className="stat-label">Active Products</div>
-          <div className="stat-footer" style={{ color: '#c084fc' }}>
-            Manage catalog <ArrowRight size={12} />
+          <div className="stat-footer" style={{ color: '#18181B' }}>
+            Catalog SKU master <ArrowRight size={12} />
           </div>
         </div>
 
         <div className="stat-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon-wrapper" style={{
-            background: (stats?.lowStockCount ?? 0) > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-            color: (stats?.lowStockCount ?? 0) > 0 ? '#f87171' : '#34d399'
+            background: (stats?.lowStockCount ?? 0) > 0 ? '#FEF2F2' : '#ECFDF5',
+            color: (stats?.lowStockCount ?? 0) > 0 ? '#991B1B' : '#065F46'
           }}>
-            <AlertTriangle size={22} />
+            <AlertTriangle size={20} />
           </div>
-          <div className="stat-value" style={{ color: (stats?.lowStockCount ?? 0) > 0 ? '#f87171' : 'inherit' }}>
+          <div className="stat-value" style={{ color: (stats?.lowStockCount ?? 0) > 0 ? '#991B1B' : 'inherit' }}>
             {stats?.lowStockCount ?? 0}
           </div>
           <div className="stat-label">Low Stock Alerts</div>
-          <div className="stat-footer" style={{ color: (stats?.lowStockCount ?? 0) > 0 ? '#f87171' : 'var(--text-muted)' }}>
-            {(stats?.lowStockCount ?? 0) > 0 ? 'Requires immediate restock' : 'All stock levels healthy'}
+          <div className="stat-footer" style={{ color: (stats?.lowStockCount ?? 0) > 0 ? '#991B1B' : 'var(--text-muted)' }}>
+            {(stats?.lowStockCount ?? 0) > 0 ? 'Requires restock action' : 'All invariants healthy'}
           </div>
         </div>
 
         <div className="stat-card" onClick={() => navigate('/challans')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}>
-            <FileText size={22} />
+          <div className="stat-icon-wrapper" style={{ background: '#FEF3C7', color: '#92400E' }}>
+            <FileText size={20} />
           </div>
           <div className="stat-value">{stats?.draftChallans ?? 0}</div>
           <div className="stat-label">Draft Challans</div>
-          <div className="stat-footer" style={{ color: '#fbbf24' }}>
-            Pending confirmation <ArrowRight size={12} />
+          <div className="stat-footer" style={{ color: '#92400E' }}>
+            Pending review <ArrowRight size={12} />
           </div>
         </div>
 
         <div className="stat-card" onClick={() => navigate('/challans')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
-            <CheckCircle size={22} />
+          <div className="stat-icon-wrapper" style={{ background: '#ECFDF5', color: '#065F46' }}>
+            <CheckCircle size={20} />
           </div>
           <div className="stat-value">{stats?.confirmedChallans ?? 0}</div>
           <div className="stat-label">Confirmed Challans</div>
-          <div className="stat-footer" style={{ color: '#34d399' }}>
-            Fulfilled orders <ArrowRight size={12} />
+          <div className="stat-footer" style={{ color: '#065F46' }}>
+            Verified dispatches <ArrowRight size={12} />
           </div>
         </div>
       </div>
@@ -134,36 +134,36 @@ export const Dashboard: React.FC = () => {
       {/* Low Stock Warning Banner if any */}
       {stats?.lowStockProducts && stats.lowStockProducts.length > 0 && (
         <div className="alert-banner" style={{
-          background: 'rgba(239, 68, 68, 0.08)',
-          border: '1px solid rgba(239, 68, 68, 0.25)',
-          borderRadius: 'var(--radius-md)',
-          padding: '16px 20px',
-          marginBottom: 24,
+          background: 'var(--reject-bg)',
+          border: '1px solid var(--reject-border)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '12px 16px',
+          marginBottom: 20,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 16
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 36, height: 36, borderRadius: '50%',
-              background: 'rgba(239, 68, 68, 0.2)',
+              width: 32, height: 32, borderRadius: 'var(--radius-xs)',
+              background: '#FEE2E2',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#f87171'
+              color: 'var(--action-reject)'
             }}>
-              <AlertTriangle size={20} />
+              <AlertTriangle size={17} />
             </div>
             <div>
-              <div style={{ fontWeight: 600, color: '#f87171' }}>
-                {stats.lowStockProducts.length} Product(s) Below Minimum Stock Level
+              <div style={{ fontWeight: 700, color: 'var(--action-reject)', fontSize: '12.5px' }}>
+                {stats.lowStockProducts.length} Product(s) Below Minimum Stock Invariant
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
                 {stats.lowStockProducts.map(p => `${p.name} (${p.stock}/${p.minStockAlert})`).join(' • ')}
               </div>
             </div>
           </div>
           <Link to="/inventory" className="btn btn-danger btn-sm" style={{ whiteSpace: 'nowrap' }}>
-            Restock Now
+            Resolve Restock
           </Link>
         </div>
       )}
